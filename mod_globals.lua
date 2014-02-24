@@ -25,7 +25,7 @@ end
 this.scaleMe = scaleMe
 
 local function topPos(obj)
-	return 0
+	return 0 + display.topStatusBarContentHeight
 end
 this.topPos = topPos
 

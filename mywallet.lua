@@ -8,7 +8,7 @@ local json = require "json"
 
 -- configs
 -- hide device status bar
-display.setStatusBar( display.HiddenStatusBar )
+display.setStatusBar( display.DefaultStatusBar )
 display.setDefault( "background", 255/255, 255/255, 255/255 )
 display.setDefault( "anchorX", 0 )
 display.setDefault( "anchorY", 0 )
@@ -21,6 +21,8 @@ local thememberid = 24
 -- Called when the scene's view does not exist:
 function scene:createScene( event )
 	local screenGroup = self.view
+	
+	print("topStatusBarContentHeight = "..display.topStatusBarContentHeight)
 	
 	-- scene globals
 	local top = 0
@@ -251,11 +253,11 @@ function scene:createScene( event )
 	scrollView = widget.newScrollView
 	{
 		left = 0,
-		top = 43,
+		top = 43+display.topStatusBarContentHeight,
 		topPadding = 20,
 		bottomPadding = 0,
 		width = display.contentWidth,
-		height = display.contentHeight-49.5-43,
+		height = display.contentHeight-49.5-43-display.topStatusBarContentHeight,
 		id = "onBottom",
 		horizontalScrollDisabled = true,
 		verticalScrollDisabled = false,

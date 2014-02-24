@@ -5,7 +5,7 @@ local g = require( "mod_globals" )
 
 -- configs
 -- hide device status bar
-display.setStatusBar( display.HiddenStatusBar )
+display.setStatusBar( display.DefaultStatusBar )
 display.setDefault( "background", 255/255, 255/255, 255/255 )
 display.setDefault( "anchorX", 0 )
 display.setDefault( "anchorY", 0 )
