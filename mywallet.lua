@@ -30,8 +30,12 @@ function scene:createScene( event )
 	local imageindex = 1
 	local images = {} -- product image filenames
 	local actualimages = {} -- the actual image object
-	local products = {}
-	local goffers = {}
+	local productTitles = {} -- product titles
+	local productExpiryTexts = {} -- product expiry texts
+	local checks = {} -- check buttons
+	local products = {} -- the products
+	local buttonAreas = {}
+	
 	local gfbid = ""
 	local gmemberid = ""
 	local gmemberproducts = {}
@@ -108,7 +112,29 @@ function scene:createScene( event )
 		network.request( url, "GET", networkListenerMemberProducts, params )
 	end 
 	
-	
+	-- buttonAreas
+	local function buttonAreasTouch( event )
+		print("buttonAreasTouch")
+		local object = event.target
+		if event.phase == "began" then
+		end
+		if ( event.phase == "moved" ) then
+			local dy = math.abs( ( event.y - event.yStart ) )
+			-- If the touch on the button has moved more than 10 pixels,
+			-- pass focus back to the scroll view so it can continue scrolling
+			if ( dy > 10 ) then
+				scrollView:takeFocus( event )
+			end
+		end
+		if event.phase == "ended" then
+			if checks[object.imageindex].isVisible then
+				checks[object.imageindex].isVisible = false
+			else
+				checks[object.imageindex].isVisible = true
+			end
+		end
+	end
+
 	local function networkListenerloadImages( event )
 		if ( event.isError ) then
 			print ( "Network error - download failed" )
@@ -128,20 +154,43 @@ function scene:createScene( event )
 		g.scaleMe(actualimages[imageindex])
 		actualimages[imageindex].y = top
 		actualimages[imageindex].x = left
+		scrollView:insert( actualimages[imageindex] )
 		
 		-- product title
-		local productTitle = display.newText(products[imageindex].title, g.scaleWidth(actualimages[imageindex])+left+10, top+3, display.contentWidth-20, 0, native.systemFont, 14)
-		productTitle:setFillColor( 96/255, 96/255, 96/255 )
+		-- productTitle = display.newText(products[imageindex].title, 0, 0, display.contentWidth-20, 0, native.systemFont, 14)
+		productTitles[imageindex] = display.newText(products[imageindex].title, 0, 0, display.contentWidth-20, 0, native.systemFont, 14)
+		productTitles[imageindex].x = g.scaleWidth(actualimages[imageindex])+left+10
+		productTitles[imageindex].y = top+4
+		productTitles[imageindex]:setFillColor( 96/255, 96/255, 96/255 )
+		scrollView:insert( productTitles[imageindex] )
+		
+		-- productExpiryTexts
+		productExpiryTexts[imageindex] = display.newText(products[imageindex].expiryText, 0, 0, display.contentWidth-20, 0, native.systemFont, 10)
+		productExpiryTexts[imageindex].x = g.scaleWidth(actualimages[imageindex])+left+10
+		productExpiryTexts[imageindex].y = top+4+productTitles[imageindex].height
+		productExpiryTexts[imageindex]:setFillColor( 96/255, 96/255, 96/255 )
+		scrollView:insert( productExpiryTexts[imageindex] )
 		
 		-- check button
-		local check = display.newImage( "images/check.png")
-		check.x = g.scaleWidth(actualimages[imageindex])+left+240
-		check.y = top + 10
-		g.scaleMe(check)
+		checks[imageindex] = display.newImage( "images/check.png")
+		checks[imageindex].x = g.scaleWidth(actualimages[imageindex])+left+240
+		checks[imageindex].y = top + 10
+		g.scaleMe(checks[imageindex])
+		scrollView:insert( checks[imageindex] )
 		
-		scrollView:insert( productTitle )
-		scrollView:insert( actualimages[imageindex] )
-		scrollView:insert( check )
+		-- button
+		buttonAreas[imageindex] = widget.newButton
+		{
+			left = left,
+			top = top - 10,
+			id = "button1",
+
+			defaultFile = "images/buttonarea.png",
+			onEvent = buttonAreasTouch
+		}
+		buttonAreas[imageindex].imageindex = imageindex
+		scrollView:insert( buttonAreas[imageindex] )
+
 		
 		top = top + g.scaleHeight(actualimages[imageindex]) + 10
 		
@@ -154,7 +203,6 @@ function scene:createScene( event )
 		scrollView:insert( bottomline )	
 		
 		imageindex = imageindex + 1
-	
 		-- arrange image reverse
 		-- actualimages[imageindex].y = 0
 		-- actualimages[imageindex].x = 0
@@ -183,6 +231,8 @@ function scene:createScene( event )
 				centerX, 360 
 			)
 			
+			
+			
 		else
 			loadingText.text = "You don't have any offers in your wallet"
 		end
@@ -198,6 +248,7 @@ function scene:createScene( event )
 	end
 	
 	local function scrollListener( event )
+		print("scrollListener")
 		local phase = event.phase
 		local direction = event.direction
 		if "began" == phase then

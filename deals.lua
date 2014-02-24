@@ -33,11 +33,13 @@ function dealsScene:createScene( event )
 	local loadingText = display.newText(lotsOfText, left, top, display.contentWidth-20, 0, native.systemFont, 16)
 	loadingText:setFillColor( 0, 0, 0 )
 	local scrollView
+	local gNoInternet = false
 	
 	
 	local function networkListenerOffers( event )
 		if ( event.isError ) then
 			loadingText.text = "No Internet Connection.\nPull down screen to reload."
+			gNoInternet = true
 		else
 			print ( "RESPONSE: " .. event.response )
 			local t = json.decode( event.response )
@@ -139,10 +141,14 @@ function dealsScene:createScene( event )
 		if event.limitReached then
 			if "up" == direction then
 				loadingText.text = "Loading Deals..."
-				getLatestImages()
+				if gNoInternet then
+					getLatestImages()
+				end 
 			elseif "down" == direction then
 				loadingText.text = "Loading Deals..."
-				getLatestImages()
+				if gNoInternet then
+					getLatestImages()
+				end 
 			elseif "left" == direction then
 				print( "Reached Left Limit" )
 			elseif "right" == direction then
