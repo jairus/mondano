@@ -12,7 +12,7 @@ display.setStatusBar( display.DefaultStatusBar )
 display.setDefault( "background", 255/255, 255/255, 255/255 )
 display.setDefault( "anchorX", 0 )
 display.setDefault( "anchorY", 0 )
-local thememberid = 24
+local thememberid = 38
 
 ---------------------------------------------------------------------------------
 -- BEGINNING OF YOUR IMPLEMENTATION
@@ -87,16 +87,20 @@ function scene:createScene( event )
 					end
 				end 
 			end
-			diff = table.getn(imagestemp) - table.getn(images)
-			if diff > 0 then
-				i = 0
-				n = table.getn(images) + 1
-				while i < diff do
-					print("image = "..imagestemp[n])
-					table.insert(images, imagestemp[n])
-					n = n + 1
-					i = i + 1
+			if(table.getn(imagestemp)>0) then
+				diff = table.getn(imagestemp) - table.getn(images)
+				if diff > 0 then
+					i = 0
+					n = table.getn(images) + 1
+					while i < diff do
+						print("image = "..imagestemp[n])
+						table.insert(images, imagestemp[n])
+						n = n + 1
+						i = i + 1
+					end
 				end
+			else 
+				loadingText.text = "Your Mondano Wallet is empty."
 			end
 		end
 	end

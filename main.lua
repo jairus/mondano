@@ -208,8 +208,8 @@ g.scaleMe(logo)
 -- default call
 resetTabs()
 deals_b.isVisible = true;
---dealsScreen()
-mywalletScreen()
+dealsScreen()
+--mywalletScreen()
 
 local function onKeyEvent( event )
     local keyname = event.keyName;
