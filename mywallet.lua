@@ -25,11 +25,12 @@ function scene:createScene( event )
 	print("topStatusBarContentHeight = "..display.topStatusBarContentHeight)
 	
 	-- scene globals
-	local top = 0
+	local top = 10
 	local left = 10
 	local imageindex = 1
 	local images = {} -- product image filenames
 	local actualimages = {} -- the actual image object
+	local products = {}
 	local goffers = {}
 	local gfbid = ""
 	local gmemberid = ""
@@ -39,19 +40,7 @@ function scene:createScene( event )
 	loadingText:setFillColor( 0, 0, 0 )
 	local scrollView
 	
-	local function echo(str)
-		loadingText.text = str
-	end
 	
-	local function getProductImage(products_id) 
-		for i=1,table.getn(goffers) do
-			print(goffers[i].Offer.product_id.." "..products_id)
-			if tostring(goffers[i].Offer.product_id) == tostring(products_id) then
-				return goffers[i].Offer.image
-			end 
-		end
-		return false
-	end
 	
 	-- get member products
 	local function networkListenerMemberProducts( event )
@@ -80,14 +69,16 @@ function scene:createScene( event )
 			--print(t.data[1].MembersProduct.id)
 			local imagestemp = {}
 			for i=1,table.getn(gmemberproducts) do
-				if tostring(gmemberproducts[i].MembersProduct.members_id) == tostring(gmemberid) then
-					imgurl = getProductImage(gmemberproducts[i].MembersProduct.products_id)
-					if imgurl then
-						table.insert(imagestemp, imgurl)
-					end
-				end 
+				product = gmemberproducts[i].Offer
+				imgurl = product.thumbnailCircle
+				if imgurl then
+					table.insert(products, product)
+					table.insert(imagestemp, imgurl)
+				end
 			end
+			print("here 1 "..table.getn(imagestemp))
 			if(table.getn(imagestemp)>0) then
+				loadingText.text = ""
 				diff = table.getn(imagestemp) - table.getn(images)
 				if diff > 0 then
 					i = 0
@@ -100,6 +91,7 @@ function scene:createScene( event )
 					end
 				end
 			else 
+				print("here 2")
 				loadingText.text = "Your Mondano Wallet is empty."
 			end
 		end
@@ -107,7 +99,7 @@ function scene:createScene( event )
 	local function getMemberProducts() --1st step is get the offers
 		print("getMemberProducts")
 		-- loadingText.text = "loaded"
-		url = "http://mondano.sg/api/membersProducts/"
+		url = "http://mondano.sg/api/membersProducts/byFacebookId?fbid=100006286952227"
 		local headers = {}
 		headers["Content-Type"] = "application/json"
 		headers["XH-MAG-API-KEY"] = "MONDANO-aUHp-9awx@c1yGX580ZmPAkrsUKlucuFH4h"
@@ -116,67 +108,6 @@ function scene:createScene( event )
 		network.request( url, "GET", networkListenerMemberProducts, params )
 	end 
 	
-	-- get member by fbid
-	local function networkListenerMemberByFbID( )
-		-- get member products
-		gmemberid = thememberid
-		getMemberProducts()
-	end
-	local function getMemberByFbID()
-		print("getMemberByFbID")
-		networkListenerMemberByFbID()
-	end
-	
-	-- get latest offers
-	local function networkListenerLatestOffers( event )
-		if ( event.isError ) then
-			loadingText.text = "No Internet Connection.\nPull down screen to reload."
-		else
-			-- print ( "RESPONSE: " .. event.response )
-			local t = json.decode( event.response )
-			--[[
-			 [0] => stdClass Object
-				(
-					[Offer] => stdClass Object
-						(
-							[id] => 1
-							[product_id] => 1
-							[title] => California Fitness
-							[description] => 21-days Unlimited Gym Access Including Group X Classes
-							[image] => http://www.mondano.sg/img/phone_application/california_app_img.png
-							[discount] => Free
-							[detailURL] => http://www.mondano.sg/california-fitness
-							[created] => 2014-02-01 15:38:58
-						)
-
-				)
-			--]]
-			goffers = t.data.offers -- populate global variable offers
-			-- get member by fb id
-			getMemberByFbID(gfbid)
-		end
-	end
-	local function getLatestOffers() --1st step is get the offers
-		print("getLatestOffers")
-		url = "http://mondano.sg/api/offers"
-		local headers = {}
-		headers["Content-Type"] = "application/json"
-		headers["XH-MAG-API-KEY"] = "MONDANO-aUHp-9awx@c1yGX580ZmPAkrsUKlucuFH4h"
-		local params = {}
-		params.headers = headers
-		network.request( url, "GET", networkListenerLatestOffers, params )
-	end 
-	
-	local function arrangeImages()
-		xtop = 0
-		ub = table.getn(actualimages)
-		while ub >= 1 do
-			actualimages[ub].x = left
-			actualimages[ub].y = xtop
-			xtop = xtop + actualimages[ub].height + 10
-			ub = ub - 1
-		end
-	end
 	
 	local function networkListenerloadImages( event )
 		if ( event.isError ) then
@@ -187,15 +118,43 @@ function scene:createScene( event )
 		end
 		-- print ( "RESPONSE: "..imageindex, event.response.filename )
 		--limit image width to max 300
+		
+		-- circle image
 		actualimages[imageindex] = event.target
 		width = actualimages[imageindex].width
 		height = actualimages[imageindex].height
-		actualimages[imageindex].width = 300
-		actualimages[imageindex].height = 300/width*height
+		-- actualimages[imageindex].width = 300
+		-- actualimages[imageindex].height = 300/width*height
+		g.scaleMe(actualimages[imageindex])
 		actualimages[imageindex].y = top
 		actualimages[imageindex].x = left
-		top = top + actualimages[imageindex].height + 10
-		scrollView:insert( actualimages[imageindex] )	
+		
+		-- product title
+		local productTitle = display.newText(products[imageindex].title, g.scaleWidth(actualimages[imageindex])+left+10, top+3, display.contentWidth-20, 0, native.systemFont, 14)
+		productTitle:setFillColor( 96/255, 96/255, 96/255 )
+		
+		-- check button
+		local check = display.newImage( "images/check.png")
+		check.x = g.scaleWidth(actualimages[imageindex])+left+240
+		check.y = top + 10
+		g.scaleMe(check)
+		
+		scrollView:insert( productTitle )
+		scrollView:insert( actualimages[imageindex] )
+		scrollView:insert( check )
+		
+		top = top + g.scaleHeight(actualimages[imageindex]) + 10
+		
+		
+		local bottomline = display.newImage( "images/line.png")
+		bottomline.x = 0
+		bottomline.y = top
+		top = top + g.scaleHeight(bottomline) + 10
+		g.scaleMe(bottomline)
+		scrollView:insert( bottomline )	
+		
+		imageindex = imageindex + 1
+	
 		-- arrange image reverse
 		-- actualimages[imageindex].y = 0
 		-- actualimages[imageindex].x = 0
@@ -207,6 +166,14 @@ function scene:createScene( event )
 		print("loadImages")
 		local fname = system.getTimer()
 		if(images[imageindex]) then
+			if imageindex == 1 then
+				print("------------------------------------------------------")
+				local topline = display.newImage( "images/line.png")
+				topline.x = 0
+				topline.y = 0
+				g.scaleMe(topline)
+				scrollView:insert( topline )	
+			end
 			image = display.loadRemoteImage( 
 				images[imageindex], 
 				"GET", 
@@ -215,7 +182,9 @@ function scene:createScene( event )
 				system.TemporaryDirectory, 
 				centerX, 360 
 			)
-			imageindex = imageindex + 1
+			
+		else
+			loadingText.text = "You don't have any offers in your wallet"
 		end
 		
 	end
@@ -237,11 +206,11 @@ function scene:createScene( event )
 		end
 		if event.limitReached then
 			if "up" == direction then
-				loadingText.text = "Loading Your Wallet..."
-				getLatestOffers()
+				-- loadingText.text = "Loading Your Wallet..."
+				getMemberProducts()
 			elseif "down" == direction then
-				loadingText.text = "Loading Your Wallet..."
-				getLatestOffers()
+				-- loadingText.text = "Loading Your Wallet..."
+				getMemberProducts()
 			elseif "left" == direction then
 			elseif "right" == direction then
 			end
@@ -254,14 +223,20 @@ function scene:createScene( event )
 	------------------------------------------------------------------------------------------------
 	-- start scene
 	
+	local wallet_title = display.newImage( "images/wallet_title.png")
+	wallet_title.x = 0
+	wallet_title.y = 43+display.topStatusBarContentHeight
+	g.scaleMe(wallet_title)
+	wallet_title.isVisible = true
+				
 	scrollView = widget.newScrollView
 	{
 		left = 0,
-		top = 43+display.topStatusBarContentHeight,
-		topPadding = 20,
+		top = 43+display.topStatusBarContentHeight+g.scaleHeight(wallet_title),
+		topPadding = 0,
 		bottomPadding = 0,
 		width = display.contentWidth,
-		height = display.contentHeight-49.5-43-display.topStatusBarContentHeight,
+		height = display.contentHeight-49.5-43-display.topStatusBarContentHeight-g.scaleHeight(wallet_title),
 		id = "onBottom",
 		horizontalScrollDisabled = true,
 		verticalScrollDisabled = false,
@@ -269,11 +244,12 @@ function scene:createScene( event )
 		backgroundColor = { 1, 1, 1 }
 	}
 	
-	getLatestOffers()
+	getMemberProducts()
 	timer.performWithDelay( 1000, loadImagesTicker, 1 )
 	
 	scrollView:insert( loadingText )
 	screenGroup:insert(scrollView)
+	screenGroup:insert(wallet_title)
 	print( "\n1: mywallet createScene event")
 end
 

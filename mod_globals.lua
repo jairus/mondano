@@ -8,7 +8,9 @@ this.lastScene = {}
 
 -- extra functions
 local function scaleHeight(obj)
-	val = obj.height * this.scale
+	width = obj.width * this.scale
+	val = width * obj.height / obj.width
+	print("height="..val)
 	return val
 end
 this.scaleHeight = scaleHeight
