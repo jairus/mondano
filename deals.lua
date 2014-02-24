@@ -1,7 +1,7 @@
 -- require controller module
 local http = require("socket.http")
 local storyboard = require "storyboard"
-local scene = storyboard.newScene()
+local dealsScene = storyboard.newScene()
 local widget = require "widget"
 local g = require( "mod_globals" )
 local json = require "json"
@@ -18,50 +18,28 @@ display.setDefault( "anchorY", 0 )
 ---------------------------------------------------------------------------------
 	
 -- Called when the scene's view does not exist:
-function scene:createScene( event )
+function dealsScene:createScene( event )
 	local screenGroup = self.view
 	
-	print(display.pixelHeight)
+	-- scene globals
+	local top = 0
+	local left = 10
+	local imageindex = 1
+	local images = {} -- product image filenames
+	local actualimages = {} -- the actual image object
+	local lotsOfText = "Loading Deals..."
+	local loadingText = display.newText(lotsOfText, left, top, display.contentWidth-20, 0, native.systemFont, 16)
+	loadingText:setFillColor( 0, 0, 0 )
+	local scrollView
 	
-	top = 0
-	left = 10
-	imageindex = 1
-	-- images 
-	images = {}
-	actualimages = {}
-	
-	
-	function print_r(arr, indentLevel)
-		local str = ""
-		local indentStr = "#"
-
-		if(indentLevel == nil) then
-			print(print_r(arr, 0))
-			return
-		end
-
-		for i = 0, indentLevel do
-			indentStr = indentStr.."\t"
-		end
-
-		for index,value in pairs(arr) do
-			if type(value) == "table" then
-				str = str..indentStr..index..": \n"..print_r(value, (indentLevel + 1))
-			else 
-				str = str..indentStr..index..": "..value.."\n"
-			end
-		end
-		return str
-	end
 	
 	local function networkListenerOffers( event )
 		if ( event.isError ) then
+			loadingText.text = "No Internet Connection.\nPull down screen to reload."
 		else
-			-- print ( "RESPONSE: " .. event.response )
+			print ( "RESPONSE: " .. event.response )
 			local t = json.decode( event.response )
 			offers = t.data.offers
-			
-			
 			diff = table.getn(offers) - table.getn(images)
 			if diff > 0 then
 				i = 0
@@ -73,8 +51,6 @@ function scene:createScene( event )
 					i = i + 1
 				end
 			end
-			-- print(t.data.offers[0].Offer.image)
-			-- print_r(t)
 		end
 	end
 
@@ -87,12 +63,6 @@ function scene:createScene( event )
 		local params = {}
 		params.headers = headers
 		network.request( url, "GET", networkListenerOffers, params )
-		-- table.insert(images, "http://www.mondano.sg/img/california-fitness-main.jpg")
-		print("Image upperbound "..table.getn(images)) 
-		
-		-- images[1] = "http://www.mondano.sg/img/california-fitness-main.jpg"
-		-- images[2] = "http://www.mondano.sg/img/california-fitness-main.jpg"
-		-- images[3] = "http://www.mondano.sg/img/california-fitness-main.jpg"
 	end 
 	
 	local function arrangeImages()
@@ -113,30 +83,18 @@ function scene:createScene( event )
 			event.target.alpha = 0
 			transition.to( event.target, { alpha = 1.0 } )
 		end
-		
 		print ( "RESPONSE: "..imageindex, event.response.filename )
-		
 		--limit image width to max 300
 		actualimages[imageindex] = event.target
 		width = actualimages[imageindex].width
 		height = actualimages[imageindex].height
 		actualimages[imageindex].width = 300
 		actualimages[imageindex].height = 300/width*height
-		
 		actualimages[imageindex].y = top
 		actualimages[imageindex].x = left
 		top = top + actualimages[imageindex].height + 10
-		
 		scrollView:insert( actualimages[imageindex] )	
-		
-		
-		-- arrange image reverse
-		-- actualimages[imageindex].y = 0
-		-- actualimages[imageindex].x = 0
-		-- arrangeImages()
-		
 	end
-	
 	
 	local function loadImages()
 		print("loadImages")
@@ -152,11 +110,10 @@ function scene:createScene( event )
 			)
 			imageindex = imageindex + 1
 		end
-		
 	end
 	
 	local function loadImagesTicker( event )
-		-- print( "ticker "..imageindex.." "..table.getn(images) )
+		-- print( "deals ticker "..imageindex.." "..table.getn(images) )
 		if imageindex <= table.getn(images) then
 			loadImages()
 		end
@@ -173,32 +130,29 @@ function scene:createScene( event )
 		if "began" == phase then
 			--print( "Began" )
 		elseif "moved" == phase then
-			--print( "Moved" )
 		elseif "ended" == phase then
-			--print( "Ended" )
 		end
 		
 		-- If the scrollView has reached it's scroll limit
 		if event.limitReached then
 			if "up" == direction then
+				loadingText.text = "Loading Deals..."
 				getLatestImages()
-				-- print( "Reached Top Limit" )
 			elseif "down" == direction then
+				loadingText.text = "Loading Deals..."
 				getLatestImages()
-				-- print( "Reached Bottom Limit" )
 			elseif "left" == direction then
 				print( "Reached Left Limit" )
 			elseif "right" == direction then
 				print( "Reached Right Limit" )
 			end
-		end
-				
+		end	
 		return true
 	end
 	
-	getLatestImages()
-
-	-- Create a ScrollView
+	------------------------------------------------------------------------------------------------
+	-- start scene
+	
 	scrollView = widget.newScrollView
 	{
 		left = 0,
@@ -213,53 +167,28 @@ function scene:createScene( event )
 		listener = scrollListener,
 		backgroundColor = { 1, 1, 1 }
 	}
-
+	scrollView:insert( loadingText )	
+	screenGroup:insert( scrollView )
+	getLatestImages()
 	
-	
-	--Create a text object for the scrollViews title
-	-- lotsOfText = system.getInfo( "maxTextureSize" ).." "..display.pixelWidth.." "..display.pixelHeight.." "..display.contentWidth.." "..display.contentHeight.." Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur imperdiet consectetur euismod.  "
-	-- text = display.newText(lotsOfText, left, top, display.contentWidth-20, 0, native.systemFont, 16)
-	-- text:setFillColor( 0, 0, 0 )
-	-- insert the text object into the created display group
-	-- scrollView:insert( text )
-	-- top = top + text.height + 10
-	
-
-	
-	--local lotsOfText = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur imperdiet consectetur euismod. Phasellus non ipsum vel eros vestibulum consequat. Integer convallis quam id urna tristique eu viverra risus eleifend.\n\nAenean suscipit placerat venenatis. Pellentesque faucibus venenatis eleifend. Nam lorem felis, rhoncus vel rutrum quis, tincidunt in sapien. Proin eu elit tortor. Nam ut mauris pellentesque justo vulputate convallis eu vitae metus. Praesent mauris eros, hendrerit ac convallis vel, cursus quis sem. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque fermentum, dui in vehicula dapibus, lorem nisi placerat turpis, quis gravida elit lectus eget nibh. Mauris molestie auctor facilisis.\n\nCurabitur lorem mi, molestie eget tincidunt quis, blandit a libero. Cras a lorem sed purus gravida rhoncus. Cras vel risus dolor, at accumsan nisi. Morbi sit amet sem purus, ut tempor mauris.\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur imperdiet consectetur euismod. Phasellus non ipsum vel eros vestibulum consequat. Integer convallis quam id urna tristique eu viverra risus eleifend.\n\nAenean suscipit placerat venenatis. Pellentesque faucibus venenatis eleifend. Nam lorem felis, rhoncus vel rutrum quis, tincidunt in sapien. Proin eu elit tortor. Nam ut mauris pellentesque justo vulputate convallis eu vitae metus. Praesent mauris eros, hendrerit ac convallis vel, cursus quis sem. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque fermentum, dui in vehicula dapibus, lorem nisi placerat turpis, quis gravida elit lectus eget nibh. Mauris molestie auctor facilisis.\n\nCurabitur lorem mi, molestie eget tincidunt quis, blandit a libero. Cras a lorem sed purus gravida rhoncus. Cras vel risus dolor, at accumsan nisi. Morbi sit amet sem purus, ut tempor mauris. "
-	--local lotsOfTextObject = display.newText( lotsOfText, display.contentCenterX, 0, 300, 0, "Helvetica", 14)
-	--lotsOfTextObject:setFillColor( 0 ) 
-	--lotsOfTextObject.anchorY = 0.0		-- Top
-	--lotsOfTextObject.y = titleText.y + titleText.contentHeight + 10
-	-- scrollView:insert( lotsOfTextObject )
-
-
-	--Create a text object for the scrollViews title
-	lotsOfText = "Loading Deals..."
-	text = display.newText(lotsOfText, left, top, display.contentWidth-20, 0, native.systemFont, 16)
-	text:setFillColor( 0, 0, 0 )
-	-- insert the text object into the created display group
-	scrollView:insert( text )
-	
-	screenGroup:insert(scrollView)
 	print( "\n1: deals createScene event")
 end
 
 
 -- Called immediately after scene has moved onscreen:
-function scene:enterScene( event )
+function dealsScene:enterScene( event )
 	print( "1: enterScene event" )
 end
 
 
 -- Called when scene is about to move offscreen:
-function scene:exitScene( event )
+function dealsScene:exitScene( event )
 	print( "1: exitScene event" )
 end
 
 
 -- Called prior to the removal of scene's "view" (display group)
-function scene:destroyScene( event )
+function dealsScene:destroyScene( event )
 	
 	print( "((destroying scene 1's view))" )
 end
@@ -269,18 +198,18 @@ end
 ---------------------------------------------------------------------------------
 
 -- "createScene" event is dispatched if scene's view does not exist
-scene:addEventListener( "createScene", scene )
+dealsScene:addEventListener( "createScene", scene )
 
 -- "enterScene" event is dispatched whenever scene transition has finished
-scene:addEventListener( "enterScene", scene )
+dealsScene:addEventListener( "enterScene", scene )
 
 -- "exitScene" event is dispatched before next scene's transition begins
-scene:addEventListener( "exitScene", scene )
+dealsScene:addEventListener( "exitScene", scene )
 
 -- "destroyScene" event is dispatched before view is unloaded, which can be
 -- automatically unloaded in low memory situations, or explicitly via a call to
 -- storyboard.purgeScene() or storyboard.removeScene().
-scene:addEventListener( "destroyScene", scene )
+dealsScene:addEventListener( "destroyScene", scene )
 
 ---------------------------------------------------------------------------------
-return scene
+return dealsScene
