@@ -12,6 +12,7 @@ display.setStatusBar( display.HiddenStatusBar )
 display.setDefault( "background", 255/255, 255/255, 255/255 )
 display.setDefault( "anchorX", 0 )
 display.setDefault( "anchorY", 0 )
+local thememberid = 24
 
 ---------------------------------------------------------------------------------
 -- BEGINNING OF YOUR IMPLEMENTATION
@@ -77,8 +78,6 @@ function scene:createScene( event )
 			--print(t.data[1].MembersProduct.id)
 			local imagestemp = {}
 			for i=1,table.getn(gmemberproducts) do
-				-- str = str..gmemberproducts[i].MembersProduct.id.."\n"
-				-- print(gmemberproducts[i].MembersProduct.members_id)
 				if tostring(gmemberproducts[i].MembersProduct.members_id) == tostring(gmemberid) then
 					imgurl = getProductImage(gmemberproducts[i].MembersProduct.products_id)
 					if imgurl then
@@ -86,7 +85,6 @@ function scene:createScene( event )
 					end
 				end 
 			end
-			
 			diff = table.getn(imagestemp) - table.getn(images)
 			if diff > 0 then
 				i = 0
@@ -98,14 +96,11 @@ function scene:createScene( event )
 					i = i + 1
 				end
 			end
-			
-			
-			
 		end
 	end
 	local function getMemberProducts() --1st step is get the offers
 		print("getMemberProducts")
-		loadingText.text = "loaded"
+		-- loadingText.text = "loaded"
 		url = "http://mondano.sg/api/membersProducts/"
 		local headers = {}
 		headers["Content-Type"] = "application/json"
@@ -118,7 +113,7 @@ function scene:createScene( event )
 	-- get member by fbid
 	local function networkListenerMemberByFbID( )
 		-- get member products
-		gmemberid = 24
+		gmemberid = thememberid
 		getMemberProducts()
 	end
 	local function getMemberByFbID()
