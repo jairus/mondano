@@ -11,7 +11,11 @@ display.setDefault( "anchorX", 0 )
 display.setDefault( "anchorY", 0 )
 
 -- globals
-local gscreen = ""
+gscreen = ""
+gfbid = ""
+gmemberid = ""
+gproducts = {} -- the offers these is populated at deals page
+gproductindex = 1
 
 -----------------------------------------------------------------------------------
 function resetTabs()
@@ -27,7 +31,17 @@ end
 
 
 -- scene functions
-local function dealsScreen(back)
+function productScreen(back)
+	resetTabs()
+	-- deals_b.isVisible = true;
+	if not back then
+		table.insert(g.lastScene, "product") -- push
+		print("pushed product")
+	end
+	print(gproductindex)
+	storyboard.gotoScene( "product" )
+end 
+function dealsScreen(back)
 	resetTabs()
 	deals_b.isVisible = true;
 	if not back then
@@ -36,7 +50,7 @@ local function dealsScreen(back)
 	end
 	storyboard.gotoScene( "deals" )
 end 
-local function signupScreen(back)
+function signupScreen(back)
 	resetTabs()
 	signup_b.isVisible = true;
 	if not back then
@@ -46,7 +60,7 @@ local function signupScreen(back)
 	storyboard.gotoScene( "signup" )
 	
 end
-local function mywalletScreen(back)
+function mywalletScreen(back)
 	resetTabs()
 	mywallet_b.isVisible = true;
 	if not back then
@@ -71,6 +85,8 @@ local function goBack()
 				signupScreen(true)
 			elseif lastscene == "mywallet" then
 				mywalletScreen(true)
+			elseif lastscene == "product" then
+				productScreen(true)
 			end
 			
 		end
@@ -208,8 +224,8 @@ g.scaleMe(logo)
 -- default call
 resetTabs()
 deals_b.isVisible = true;
---dealsScreen()
-mywalletScreen()
+dealsScreen()
+-- mywalletScreen()
 
 local function onKeyEvent( event )
     local keyname = event.keyName;

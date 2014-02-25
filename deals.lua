@@ -14,150 +14,195 @@ display.setDefault( "anchorX", 0 )
 display.setDefault( "anchorY", 0 )
 
 
-
 ---------------------------------------------------------------------------------
 -- BEGINNING OF YOUR IMPLEMENTATION
 ---------------------------------------------------------------------------------
+
+-- scene globals
+local top = 0
+local left = 10
+local imageindex = 1
+local actualimageindex = 1
+local images = {} -- product image filenames
+local actualimages = {} -- the actual image object
+local buttonAreas = {}
+local lotsOfText = "Loading Deals..."
+local loadingText = display.newText(lotsOfText, left, top, display.contentWidth-20, 0, native.systemFont, 16)
+loadingText:setFillColor( 0, 0, 0 )
+local scrollView
+local noInternet = false
+
+
+-- buttonAreas
+local function buttonAreasTouch( event )
+	print("buttonAreasTouch")
+	local object = event.target
+	if event.phase == "began" then
+	end
+	if ( event.phase == "moved" ) then
+		local dy = math.abs( ( event.y - event.yStart ) )
+		-- If the touch on the button has moved more than 10 pixels,
+		-- pass focus back to the scroll view so it can continue scrolling
+		if ( dy > 10 ) then
+			scrollView:takeFocus( event )
+		end
+	end
+	if event.phase == "ended" then
+		gproductindex = object.productindex
+		productScreen()
+	end
+end
+
+local function networkListener( event )
+	if ( event.isError ) then
+		print ( "Network error - download failed" )
+	else
+		event.target.alpha = 0
+		transition.to( event.target, { alpha = 1.0 } )
+	end
+	actualimageindex = event.target.x -- use the x as index hehehe
 	
+	--limit image width to max 300
+	actualimages[actualimageindex] = event.target
+	width = actualimages[actualimageindex].width
+	height = actualimages[actualimageindex].height
+	actualimages[actualimageindex].width = 300
+	actualimages[actualimageindex].height = 300/width*height
+	actualimages[actualimageindex].y = top
+	actualimages[actualimageindex].x = left
+	scrollView:insert( actualimages[actualimageindex] )	
+	
+	-- button
+	buttonAreas[actualimageindex] = widget.newButton
+	{
+		left = left,
+		top = top,
+		id = "button"..actualimageindex,
+		height = actualimages[actualimageindex].height,
+		defaultFile = "images/dealsbutton.png",
+		onEvent = buttonAreasTouch
+	}
+	buttonAreas[actualimageindex].productindex = actualimageindex
+	scrollView:insert( buttonAreas[actualimageindex] )
+	
+	top = top + actualimages[actualimageindex].height + 10
+	actualimageindex = actualimageindex + 1
+end
+
+local function loadImages()
+	print("loadImages")
+	local fname = system.getTimer()
+	if(images[imageindex]) then
+		local image		
+		image = display.loadRemoteImage( 
+			images[imageindex], 
+			"GET", 
+			networkListener, 
+			fname..".png", 
+			system.TemporaryDirectory, 
+			imageindex, -- use the x as index hehehe
+			360 
+		)
+		imageindex = imageindex + 1
+	end
+end
+
+local function networkListenerOffers( event )
+	if ( event.isError ) then
+		loadingText.text = "No Internet Connection.\nPull down screen to reload."
+		noInternet = true
+	else
+		print ( "RESPONSE: " .. event.response )
+		local t = json.decode( event.response )
+		offers = t.data.offers
+		gproducts = {}
+		for i=1, table.getn(offers) do
+			table.insert(gproducts, offers[i].Offer)
+		end
+	
+		diff = table.getn(offers) - table.getn(images)
+		if diff > 0 then
+			i = 0
+			n = table.getn(images) + 1
+			while i < diff do
+				print("image = "..offers[n].Offer.image)
+				table.insert(images, offers[n].Offer.image)
+				n = n + 1
+				i = i + 1
+			end
+			loadImages()
+		end
+	end
+end
+
+local function getLatestImages()
+	print("getLatestImages")
+	url = "http://mondano.sg/api/offers"
+	local headers = {}
+	headers["Content-Type"] = "application/json"
+	headers["XH-MAG-API-KEY"] = "MONDANO-aUHp-9awx@c1yGX580ZmPAkrsUKlucuFH4h"
+	local params = {}
+	params.headers = headers
+	network.request( url, "GET", networkListenerOffers, params )
+end 
+
+local function arrangeImages()
+	xtop = 0
+	ub = table.getn(actualimages)
+	while ub >= 1 do
+		actualimages[ub].x = left
+		actualimages[ub].y = xtop
+		xtop = xtop + actualimages[ub].height + 10
+		ub = ub - 1
+	end
+end
+
+local function loadImagesTicker( event )
+	-- print( "deals ticker "..imageindex.." "..table.getn(images) )
+	if imageindex <= table.getn(images) then
+		loadImages()
+	end
+	timer.performWithDelay( 1000, loadImagesTicker, 1 )
+end
+timer.performWithDelay( 1000, loadImagesTicker, 1 )
+
+
+-- Our ScrollView listener
+local function scrollListener( event )
+	local phase = event.phase
+	local direction = event.direction
+	
+	if "began" == phase then
+		--print( "Began" )
+	elseif "moved" == phase then
+	elseif "ended" == phase then
+	end
+	
+	-- If the scrollView has reached it's scroll limit
+	if event.limitReached then
+		if "up" == direction then
+			loadingText.text = "Loading Deals..."
+			if noInternet then
+				getLatestImages()
+			end 
+		elseif "down" == direction then
+			loadingText.text = "Loading Deals..."
+			if noInternet then
+				getLatestImages()
+			end 
+		elseif "left" == direction then
+			print( "Reached Left Limit" )
+		elseif "right" == direction then
+			print( "Reached Right Limit" )
+		end
+	end	
+	return true
+end
+
+
 -- Called when the scene's view does not exist:
 function dealsScene:createScene( event )
 	local screenGroup = self.view
-	
-	-- scene globals
-	local top = 0
-	local left = 10
-	local imageindex = 1
-	local images = {} -- product image filenames
-	local actualimages = {} -- the actual image object
-	local lotsOfText = "Loading Deals..."
-	local loadingText = display.newText(lotsOfText, left, top, display.contentWidth-20, 0, native.systemFont, 16)
-	loadingText:setFillColor( 0, 0, 0 )
-	local scrollView
-	local gNoInternet = false
-	
-	
-	local function networkListenerOffers( event )
-		if ( event.isError ) then
-			loadingText.text = "No Internet Connection.\nPull down screen to reload."
-			gNoInternet = true
-		else
-			print ( "RESPONSE: " .. event.response )
-			local t = json.decode( event.response )
-			offers = t.data.offers
-			diff = table.getn(offers) - table.getn(images)
-			if diff > 0 then
-				i = 0
-				n = table.getn(images) + 1
-				while i < diff do
-					print("image = "..offers[n].Offer.image)
-					table.insert(images, offers[n].Offer.image)
-					n = n + 1
-					i = i + 1
-				end
-			end
-		end
-	end
-
-	local function getLatestImages()
-		print("getLatestImages")
-		url = "http://mondano.sg/api/offers"
-		local headers = {}
-		headers["Content-Type"] = "application/json"
-		headers["XH-MAG-API-KEY"] = "MONDANO-aUHp-9awx@c1yGX580ZmPAkrsUKlucuFH4h"
-		local params = {}
-		params.headers = headers
-		network.request( url, "GET", networkListenerOffers, params )
-	end 
-	
-	local function arrangeImages()
-		xtop = 0
-		ub = table.getn(actualimages)
-		while ub >= 1 do
-			actualimages[ub].x = left
-			actualimages[ub].y = xtop
-			xtop = xtop + actualimages[ub].height + 10
-			ub = ub - 1
-		end
-	end
-	
-	local function networkListener( event )
-		if ( event.isError ) then
-			print ( "Network error - download failed" )
-		else
-			event.target.alpha = 0
-			transition.to( event.target, { alpha = 1.0 } )
-		end
-		print ( "RESPONSE: "..imageindex, event.response.filename )
-		--limit image width to max 300
-		actualimages[imageindex] = event.target
-		width = actualimages[imageindex].width
-		height = actualimages[imageindex].height
-		actualimages[imageindex].width = 300
-		actualimages[imageindex].height = 300/width*height
-		actualimages[imageindex].y = top
-		actualimages[imageindex].x = left
-		top = top + actualimages[imageindex].height + 10
-		scrollView:insert( actualimages[imageindex] )	
-	end
-	
-	local function loadImages()
-		print("loadImages")
-		local fname = system.getTimer()
-		if(images[imageindex]) then
-			image = display.loadRemoteImage( 
-				images[imageindex], 
-				"GET", 
-				networkListener, 
-				fname..".png", 
-				system.TemporaryDirectory, 
-				centerX, 360 
-			)
-			imageindex = imageindex + 1
-		end
-	end
-	
-	local function loadImagesTicker( event )
-		-- print( "deals ticker "..imageindex.." "..table.getn(images) )
-		if imageindex <= table.getn(images) then
-			loadImages()
-		end
-		timer.performWithDelay( 1000, loadImagesTicker, 1 )
-	end
-	timer.performWithDelay( 1000, loadImagesTicker, 1 )
-	
-	
-	-- Our ScrollView listener
-	local function scrollListener( event )
-		local phase = event.phase
-		local direction = event.direction
-		
-		if "began" == phase then
-			--print( "Began" )
-		elseif "moved" == phase then
-		elseif "ended" == phase then
-		end
-		
-		-- If the scrollView has reached it's scroll limit
-		if event.limitReached then
-			if "up" == direction then
-				loadingText.text = "Loading Deals..."
-				if gNoInternet then
-					getLatestImages()
-				end 
-			elseif "down" == direction then
-				loadingText.text = "Loading Deals..."
-				if gNoInternet then
-					getLatestImages()
-				end 
-			elseif "left" == direction then
-				print( "Reached Left Limit" )
-			elseif "right" == direction then
-				print( "Reached Right Limit" )
-			end
-		end	
-		return true
-	end
-	
 	------------------------------------------------------------------------------------------------
 	-- start scene
 	
