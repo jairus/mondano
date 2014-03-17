@@ -4,7 +4,6 @@ local scene = storyboard.newScene()
 local widget = require "widget"
 local g = require( "mod_globals" )
 local json = require "json"
-local facebook = require("facebook")
 
 -- configs
 -- hide device status bar
@@ -16,116 +15,134 @@ display.setDefault( "anchorY", 0 )
 ---------------------------------------------------------------------------------
 -- BEGINNING OF YOUR IMPLEMENTATION
 ---------------------------------------------------------------------------------
-
-local appId  = "621488324580194"	-- Add  your App ID here (also go into build.settings and replace XXXXXXXXX with your appId under CFBundleURLSchemes)
-local apiKey = "603198f8930bd704862c4c8fb5bd2ddd"	-- Not needed at this time
+local screenGroup 
 local myText
 
-local function networkloginOrSignup( event )
+local function networkListenerClaimOffer(event)
 	if ( event.isError ) then
-		myText.text = "No Internet Connection.\nPull down screen to reload."
-		noInternet = true
+		loadingText.text = "No Internet Connection.\nPull down screen to reload."
 	else
-		print ( "RESPONSE: " .. tostring(event.response) )
+		print("-------------------------------------\n\n\n")
+		print(event.response)
 		local t = json.decode( event.response )
-		if t.data.MSG then -- Already a member
-			gloggedin = true
-			mywalletScreen()
+		local status = tostring(t.Status)
+		local errormessage = tostring(t.error.ERR_MSG)
+		print(status.."<->"..errormessage)
+		if status == "false" then
+			gerrormessage = errormessage
+			errorScreen()
 		else 
-			profileScreen()
-		end 
-		myText.text = tostring(event.response)
+			claimSuccessScreen()
+		end
 	end
-	--myText.isVisible = true
-end
 
-local function loginOrSignup()
-	url = "http://www.mondano.sg/api/MembersFreelahs/isMember?fbid="..gfbid
-	myText.text = url
+end
+local function claimOffer() --1st step is get the offers
+	print("claimOffer")
+	-- loadingText.text = "loaded"
+	myText.text = "Trying again..."
+	url = "http://mondano.sg/api/membersProducts/claim/?".."fb_id="..gfbid.."&product_id="..gproducts[gproductindex].product_id.."&access_token="..gtoken
+	print(url)
 	local headers = {}
 	headers["Content-Type"] = "application/json"
 	headers["XH-MAG-API-KEY"] = "MONDANO-aUHp-9awx@c1yGX580ZmPAkrsUKlucuFH4h"
 	local params = {}
 	params.headers = headers
-	network.request( url, "GET", networkloginOrSignup, params )
-	
-	
-	--[[
-	if 1 then -- if not yet registerd
-		profileScreen()
-	else
-		gloggedin = true
-		mywalletScreen()
-	end
-	]]--
-end
-local function fblistener( event )
-	myText.text = "in listener..."
-	txtx = "event.token: "..tostring(event.token).."\n"
-	txtx = txtx.."event.name: "..tostring(event.name).."\n"
-	txtx = txtx.."event.type: "..tostring(event.type).."\n"
-	txtx = txtx.."event.isError: "..tostring(event.isError).."\n"
-	txtx = txtx.."event.didComplete: "..tostring(event.didComplete).."\n"
-	txtx = txtx.."event.phase: "..tostring(event.phase).."\n"
-    txtx = txtx.."event.response: "..tostring(event.response).."\n"
-	-- myText.text = txtx
-	
-	if ( "request" == event.type ) then
-		local response = tostring(event.response)
-		if response then
-			myText.text = "error 1"
-			response = json.decode( tostring(event.response) )
-			myText.text = "error 2"
-			txtx = txtx.."response.id: "..tostring(response.id).."\n"
-			txtx = txtx.."response.name: "..tostring(response.name).."\n"
-			gfbid = response.id
-			myText.text = txtx
-			myText.text = "loginOrSignup"
-			loginOrSignup()
-		end
-	elseif( "session" == event.type ) then
-		if event.token then 
-			gtoken = tostring(event.token) -- set gtoken
-			facebook.request( "me" ) -- to get id
-		else
-			dealsScreen()
-		end
-	end
-	
-	-- myText.text = txtx
-	
+	-- local body = { fb_id = "112123", product_id = "1" }
+	-- local body = "fb_id="..gfbid.."&product_id="..gproducts[gproductindex].product_id
+	-- local body = "fb_id=100006286952227&product_id=1"
+	-- local body = "language=en&apikey=yourapikeynoquotes"
+	-- params.body = body
+	-- print(params.body)
+	network.request( url, "GET", networkListenerClaimOffer, params )
 end 
 
--- Called when the scene's view does not exist:
+
+local function shareButtonTouch( event )
+	print("shareButtonTouch")
+	local object = event.target
+	if event.phase == "began" then
+	end
+	if ( event.phase == "moved" ) then
+	end
+	if event.phase == "ended" then
+		print("shareButtonTouch")
+		claimOffer()
+	end
+end
+
+local function cancelButtonTouch( event )
+	print("cancelButtonTouch")
+	local object = event.target
+	if event.phase == "began" then
+	end
+	if ( event.phase == "moved" ) then
+	end
+	if event.phase == "ended" then
+		print("cancelButtonTouch")
+		dealsScreen()
+	end
+end
+
+
 function scene:createScene( event )
-	local screenGroup = self.view
+	screenGroup = self.view
+	
+	sww = display.newImage( "images/something_went_wrong.png")
+	sww.x = g.centerPos(sww)
+	sww.y = 100
+	g.scaleMe(sww)
+	screenGroup:insert(sww)
+
 	local options = 
 	{
 		--parent = textGroup,
-		text =  "Sign up / Sign in",     
+		text =  gerrormessage,     
 		x = 100,
-		y = 100,
+		y = sww.y+sww.height,
 		width = 250,     --required for multi-line and alignment
 		font = native.systemFont,   
 		fontSize = 16,
 		align = "center"  --new alignment parameter
 	}
 	myText = display.newText( options )
-	myText:setFillColor( 81/255, 115/255, 173/255 )
+	myText:setFillColor( 81/255, 115/255, 173/115 )
 	myText.x = 320/2 - (myText.width/2)
 	screenGroup:insert(myText)
+	
+	
+	local shareButton = widget.newButton
+	{
+		top = myText.y+myText.height+50,
+		left = 15,
+		id = "button",
+		defaultFile = "images/ok_try_again.png",
+		onEvent = shareButtonTouch
+	}
+	g.scaleMe(shareButton)
+	screenGroup:insert( shareButton )
+	
+	local cancelButton = widget.newButton
+	{
+		top = myText.y+myText.height+50,
+		left =30+(shareButton.width/2),
+		id = "button",
+		defaultFile = "images/cancel.png",
+		onEvent = cancelButtonTouch
+	}
+	g.scaleMe(cancelButton)
+	screenGroup:insert( cancelButton )
+	
+	
+	
 	print( "\n1: deals createScene event")
 end
 
 
 -- Called immediately after scene has moved onscreen:
 function scene:enterScene( event )
-	--facebook.login( appId, fblistener )
-	facebook.login( appId, fblistener, {"publish_actions", "email", "user_birthday"}  )
-	myText.text = "Logging in..."
-	myText.isVisible = false
-	
 	print( "1: enterScene event" )
+	myText.text = gerrormessage
 end
 
 

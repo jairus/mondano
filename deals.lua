@@ -5,6 +5,7 @@ local dealsScene = storyboard.newScene()
 local widget = require "widget"
 local g = require( "mod_globals" )
 local json = require "json"
+local crypto = require "crypto"
 
 -- configs
 -- hide device status bar
@@ -28,7 +29,7 @@ local actualimages = {} -- the actual image object
 local buttonAreas = {}
 local lotsOfText = "Loading Deals..."
 local loadingText = display.newText(lotsOfText, left, top, display.contentWidth-20, 0, native.systemFont, 16)
-loadingText:setFillColor( 0, 0, 0 )
+loadingText:setFillColor( 81/255, 115/255, 173/255 )
 local scrollView
 local noInternet = false
 
@@ -91,7 +92,8 @@ end
 
 local function loadImages()
 	print("loadImages")
-	local fname = system.getTimer()
+	-- local fname = system.getTimer()
+	local fname = crypto.digest( crypto.md5, images[imageindex] )
 	if(images[imageindex]) then
 		local image		
 		image = display.loadRemoteImage( 
@@ -137,7 +139,7 @@ end
 
 local function getLatestImages()
 	print("getLatestImages")
-	url = "http://mondano.sg/api/offers"
+	url = "http://mondano.sg/api/offers/active"
 	local headers = {}
 	headers["Content-Type"] = "application/json"
 	headers["XH-MAG-API-KEY"] = "MONDANO-aUHp-9awx@c1yGX580ZmPAkrsUKlucuFH4h"
